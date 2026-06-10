@@ -171,6 +171,10 @@ const DeleteBtn = ({onClick}) => (
   <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"#fee2e2", color:"#991b1b", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12, fontWeight:700}}>Delete</button>
 );
 
+const EditBtn = ({onClick}) => (
+  <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"#eff6ff", color:"#1e40af", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12, fontWeight:700}}>Edit</button>
+);
+
 // ── NAV ───────────────────────────────────────────────────────────────────────
 const NAV = [
   {id:"dashboard", label:"Dashboard", icon:"⊞", group:"OVERVIEW"},
@@ -654,29 +658,42 @@ function CharacteristicsPage({ characteristics, setCharacteristics }) {
 // ── OWNERS ────────────────────────────────────────────────────────────────────
 function OwnersPage({ owners, setOwners }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", notes:""});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", notes:""};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setOwners([...owners, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", notes:""});
+    if (editing) {
+      setOwners(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setOwners(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 1 — Administrative access to all properties">Property Owners</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Owner</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Owner</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Owner</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Owner" : "New Owner"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
           <textarea style={{...inp, resize:"vertical", minHeight:80}} placeholder="Notes" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -686,7 +703,7 @@ function OwnersPage({ owners, setOwners }) {
             <Card key={o.id}>
               <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                 <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{o.name}</div>
-                <DeleteBtn onClick={()=>setOwners(owners.filter(x=>x.id!==o.id))}/>
+                <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(o)}/><DeleteBtn onClick={()=>setOwners(owners.filter(x=>x.id!==o.id))}/></div>
               </div>
               {o.email&&<div style={{fontSize:12, color:"#64748b"}}>{o.email}</div>}
               {o.phone&&<div style={{fontSize:12, color:"#64748b"}}>{o.phone}</div>}
@@ -703,22 +720,35 @@ function OwnersPage({ owners, setOwners }) {
 // ── OPS STAFF ─────────────────────────────────────────────────────────────────
 function OpsStaffPage({ opsStaff, setOpsStaff, properties }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", roleTitle:"Operations Coordinator", allProperties:false, assignedProperties:[]});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", roleTitle:"Operations Coordinator", allProperties:false, assignedProperties:[]};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setOpsStaff([...opsStaff, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", roleTitle:"Operations Coordinator", allProperties:false, assignedProperties:[]});
+    if (editing) {
+      setOpsStaff(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setOpsStaff(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 2 — Operations coordination across properties">Operations Staff</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Staff</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Staff</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Operations Staff</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Operations Staff" : "New Operations Staff"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
@@ -732,8 +762,8 @@ function OpsStaffPage({ opsStaff, setOpsStaff, properties }) {
           </label>
           {!form.allProperties && <MultiSelect label="Assigned Properties" options={properties.map(p=>({id:p.id,name:p.name}))} selected={form.assignedProperties} onChange={v=>setForm({...form,assignedProperties:v})}/>}
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -743,7 +773,7 @@ function OpsStaffPage({ opsStaff, setOpsStaff, properties }) {
             <Card key={o.id}>
               <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                 <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{o.name}</div>
-                <DeleteBtn onClick={()=>setOpsStaff(opsStaff.filter(x=>x.id!==o.id))}/>
+                <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(o)}/><DeleteBtn onClick={()=>setOpsStaff(opsStaff.filter(x=>x.id!==o.id))}/></div>
               </div>
               <div style={{marginBottom:6}}>{badge(o.roleTitle, "#dbeafe", "#1e40af")}</div>
               {o.email&&<div style={{fontSize:12, color:"#64748b"}}>{o.email}</div>}
@@ -760,29 +790,42 @@ function OpsStaffPage({ opsStaff, setOpsStaff, properties }) {
 // ── MANAGERS ──────────────────────────────────────────────────────────────────
 function ManagersPage({ managers, setManagers, properties }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", assignedProperties:[]});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", assignedProperties:[]};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setManagers([...managers, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", assignedProperties:[]});
+    if (editing) {
+      setManagers(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setManagers(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 3 — On-site estate management">Estate Managers</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Manager</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Manager</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Estate Manager</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Estate Manager" : "New Estate Manager"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
           <MultiSelect label="Assigned Properties" options={properties.map(p=>({id:p.id,name:p.name}))} selected={form.assignedProperties} onChange={v=>setForm({...form,assignedProperties:v})}/>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -792,7 +835,7 @@ function ManagersPage({ managers, setManagers, properties }) {
             <Card key={m.id}>
               <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                 <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{m.name}</div>
-                <DeleteBtn onClick={()=>setManagers(managers.filter(x=>x.id!==m.id))}/>
+                <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(m)}/><DeleteBtn onClick={()=>setManagers(managers.filter(x=>x.id!==m.id))}/></div>
               </div>
               {m.email&&<div style={{fontSize:12, color:"#64748b"}}>{m.email}</div>}
               {m.phone&&<div style={{fontSize:12, color:"#64748b"}}>{m.phone}</div>}
