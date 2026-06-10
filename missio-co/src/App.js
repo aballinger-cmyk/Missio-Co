@@ -379,16 +379,21 @@ function DashboardPage({ properties, tasks, requests, projects, managers, naviga
       {/* Stats row */}
       <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:14, marginBottom:28}}>
         {[
-          {label:"Properties", value:properties.length, color:NAVY},
-          {label:"Active Tasks", value:activeTasks, color:GREEN},
-          {label:"Open Requests", value:openRequests, color:"#92400e"},
-          {label:"Projects in Progress", value:inProgressProjects, color:NAVY},
-          {label:"Overdue Projects", value:overdueProjects.length, color:"#991b1b"},
-          {label:"Checklist Completions Today", value:checklistCompletions, color:GREEN},
+          {label:"Properties", value:properties.length, color:NAVY, page:"properties"},
+          {label:"Active Tasks", value:activeTasks, color:GREEN, page:"tasks"},
+          {label:"Open Requests", value:openRequests, color:"#92400e", page:"requests"},
+          {label:"Projects in Progress", value:inProgressProjects, color:NAVY, page:"projects"},
+          {label:"Overdue Projects", value:overdueProjects.length, color:"#991b1b", page:"projects"},
+          {label:"Checklist Completions", value:checklistCompletions, color:GREEN, page:"checklists"},
         ].map(s=>(
-          <Card key={s.label} style={{padding:"14px 18px"}}>
+          <Card key={s.label} onClick={()=>navigate(s.page)}
+            style={{padding:"14px 18px", cursor:"pointer", borderBottom:`3px solid ${s.color}`,
+              transition:"transform 0.1s, box-shadow 0.1s"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.12)"}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow=""}}>
             <div style={{fontSize:28, fontWeight:900, color:s.color}}>{s.value}</div>
             <div style={{fontSize:12, color:"#64748b", marginTop:2}}>{s.label}</div>
+            <div style={{fontSize:10, color:"#94a3b8", marginTop:5}}>View all →</div>
           </Card>
         ))}
       </div>
@@ -403,7 +408,7 @@ function DashboardPage({ properties, tasks, requests, projects, managers, naviga
             const urgReqs = requests.filter(r=>r.propertyId===p.id&&(r.urgency==="Emergency"||r.urgency==="Urgent")).length;
             const nextProj = projects.filter(pr=>pr.propertyIds&&pr.propertyIds.includes(p.id)&&pr.dueDate&&pr.status!=="Complete").sort((a,b)=>a.dueDate>b.dueDate?1:-1)[0];
             return (
-              <Card key={p.id} style={{borderLeft:`4px solid ${GOLD}`}}>
+              <Card key={p.id} onClick={()=>navigate("properties")} style={{borderLeft:`4px solid ${GOLD}`, cursor:"pointer"}}>
                 <div style={{fontWeight:700, color:NAVY, fontSize:15, marginBottom:4}}>{p.name}</div>
                 <div style={{fontSize:12, color:"#64748b", marginBottom:8}}>{p.address||"No address"}</div>
                 <div style={{fontSize:12, color:"#475569"}}>Manager: <b>{mgr?mgr.name:"Unassigned"}</b></div>
@@ -1227,6 +1232,7 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
   const [newItem, setNewItem] = useState("");
   const [csvPreview, setCsvPreview] = useState(null);
   const [csvRows, setCsvRows] = useState([]);
+  const [csvFreqFilter, setCsvFreqFilter] = useState("All");
   const fileRef = useRef(null);
 
   const addItem = () => {
@@ -1296,27 +1302,58 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
         <input ref={fileRef} type="file" accept=".csv" onChange={handleCsvUpload} style={{fontSize:13, marginBottom:8}}/>
         {csvPreview && csvRows.length>0 && (
           <div>
-            <div style={{overflowX:"auto", marginBottom:10}}>
-              <table style={{width:"100%", borderCollapse:"collapse", fontSize:12}}>
-                <thead>
-                  <tr style={{background:"#f1f5f9"}}>
-                    {["Task Name","Frequency","Priority","Assigned To","Notes"].map(h=><th key={h} style={{padding:"6px 10px", textAlign:"left", fontWeight:700, color:"#475569"}}>{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {csvRows.map((r,i)=>(
-                    <tr key={i} style={{borderTop:"1px solid #e2e8f0"}}>
-                      <td style={{padding:"5px 10px"}}>{r.title}</td>
-                      <td style={{padding:"5px 10px"}}>{r.frequency}</td>
-                      <td style={{padding:"5px 10px"}}>{r.priority}</td>
-                      <td style={{padding:"5px 10px"}}>{r.assignedTo}</td>
-                      <td style={{padding:"5px 10px"}}>{r.notes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{fontSize:13, fontWeight:600, color:NAVY, marginBottom:8}}>
+              Preview — {csvRows.length} tasks found
             </div>
-            <button onClick={importTasks} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"8px 20px", fontWeight:700, cursor:"pointer"}}>Import {csvRows.length} Tasks</button>
+            {/* Frequency filter tabs */}
+            <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:12}}>
+              {["All","Daily","Weekly","Monthly","Quarterly","Annual"].map(f=>{
+                const count = f==="All" ? csvRows.length : csvRows.filter(r=>(r.frequency||"").toLowerCase()===f.toLowerCase()).length;
+                return (
+                  <button key={f} onClick={()=>setCsvFreqFilter(f)}
+                    style={{padding:"5px 14px", borderRadius:20, border:"none", cursor:"pointer", fontSize:12, fontWeight:600,
+                      background:csvFreqFilter===f?NAVY:"#f1f5f9", color:csvFreqFilter===f?"#fff":"#475569"}}>
+                    {f} {count>0&&<span style={{fontSize:10, opacity:0.7}}>({count})</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Grouped by frequency */}
+            {(csvFreqFilter==="All"
+              ? ["Daily","Weekly","Monthly","Quarterly","Annual",""].reduce((acc,freq)=>{
+                  const rows = csvRows.filter(r=>(r.frequency||"")===(freq||r.frequency||""));
+                  if (freq===""){ const leftover = csvRows.filter(r=>!["Daily","Weekly","Monthly","Quarterly","Annual"].includes(r.frequency||"")); if(leftover.length) acc.push({freq:"Other",rows:leftover}); }
+                  else if(rows.length) acc.push({freq,rows});
+                  return acc;
+                },[])
+              : [{freq:csvFreqFilter, rows:csvRows.filter(r=>(r.frequency||"").toLowerCase()===csvFreqFilter.toLowerCase())}]
+            ).map(group=>(
+              <div key={group.freq} style={{marginBottom:16}}>
+                <div style={{fontSize:12, fontWeight:700, color:GREEN, marginBottom:6, textTransform:"uppercase", letterSpacing:0.5}}>{group.freq}</div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%", borderCollapse:"collapse", fontSize:12}}>
+                    <thead>
+                      <tr style={{background:"#f1f5f9"}}>
+                        {["Task Name","Priority","Assigned To","Notes"].map(h=><th key={h} style={{padding:"6px 10px", textAlign:"left", fontWeight:700, color:"#475569"}}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((r,i)=>(
+                        <tr key={i} style={{borderTop:"1px solid #e2e8f0", background:i%2===0?"#fff":"#fafafa"}}>
+                          <td style={{padding:"5px 10px"}}>{r.title}</td>
+                          <td style={{padding:"5px 10px"}}>{r.priority||"—"}</td>
+                          <td style={{padding:"5px 10px"}}>{r.assignedTo||"—"}</td>
+                          <td style={{padding:"5px 10px", color:"#94a3b8"}}>{r.notes||"—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+            <button onClick={importTasks} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"8px 20px", fontWeight:700, cursor:"pointer"}}>
+              Import All {csvRows.length} Tasks →
+            </button>
           </div>
         )}
       </Card>
@@ -1395,6 +1432,8 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
   const [showForm, setShowForm] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [noteText, setNoteText] = useState("");
+  const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
+  const [calDate, setCalDate] = useState(new Date());
   const [form, setForm] = useState({name:"", description:"", propertyIds:[], assignedPeople:[], startDate:"", dueDate:"", status:"Not Started", notes:[]});
   const add = () => {
     if (!form.name.trim()) return;
@@ -1409,9 +1448,21 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
   };
   return (
     <div>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, flexWrap:"wrap", gap:10}}>
         <SectionTitle sub="Track projects and timelines across properties">Timeline / Projects</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Project</button>
+        <div style={{display:"flex", gap:8, alignItems:"center"}}>
+          {/* View toggle */}
+          <div style={{display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${NAVY}`}}>
+            {[["list","☰ List"],["calendar","📅 Calendar"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setViewMode(v)}
+                style={{padding:"8px 14px", border:"none", cursor:"pointer", fontSize:13, fontWeight:600,
+                  background:viewMode===v?NAVY:"#fff", color:viewMode===v?"#fff":NAVY}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Project</button>
+        </div>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
@@ -1439,7 +1490,79 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
           </div>
         </Card>
       )}
-      {projects.length===0 ? <EmptyState icon="📅" title="No Projects" message="Add projects to track timelines and milestones." action="Add Project" onAction={()=>setShowForm(true)}/> : (
+      {projects.length===0 ? <EmptyState icon="📅" title="No Projects" message="Add projects to track timelines and milestones." action="Add Project" onAction={()=>setShowForm(true)}/> : viewMode==="calendar" ? (
+        // ── Calendar View ──────────────────────────────────────
+        (() => {
+          const year = calDate.getFullYear();
+          const month = calDate.getMonth();
+          const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+          const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+          const firstDow = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month+1, 0).getDate();
+          const today = new Date().toISOString().split("T")[0];
+          const cells = Array(firstDow).fill(null).concat(Array.from({length:daysInMonth},(_,i)=>i+1));
+          const getProj = (day) => {
+            if (!day) return [];
+            const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+            return projects.filter(p=>p.dueDate===ds||p.startDate===ds);
+          };
+          return (
+            <div>
+              {/* Month nav */}
+              <div style={{display:"flex", alignItems:"center", gap:16, marginBottom:16}}>
+                <button onClick={()=>setCalDate(new Date(year,month-1,1))}
+                  style={{background:"#f1f5f9", border:"none", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontWeight:700, fontSize:16}}>‹</button>
+                <span style={{fontWeight:800, fontSize:18, color:NAVY, minWidth:180, textAlign:"center"}}>{MONTH_NAMES[month]} {year}</span>
+                <button onClick={()=>setCalDate(new Date(year,month+1,1))}
+                  style={{background:"#f1f5f9", border:"none", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontWeight:700, fontSize:16}}>›</button>
+                <button onClick={()=>setCalDate(new Date())}
+                  style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:600}}>Today</button>
+              </div>
+              {/* Day headers */}
+              <div style={{display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:2}}>
+                {DAY_NAMES.map(d=>(
+                  <div key={d} style={{textAlign:"center", fontSize:11, fontWeight:700, color:"#94a3b8", padding:"4px 0"}}>{d}</div>
+                ))}
+              </div>
+              {/* Grid */}
+              <div style={{display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2}}>
+                {cells.map((day,i)=>{
+                  const ds = day ? `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}` : null;
+                  const isToday = ds===today;
+                  const dayProjs = getProj(day);
+                  return (
+                    <div key={i} style={{minHeight:80, background:day?(isToday?"#eef2ff":"#fff"):"#f8f6f0",
+                      borderRadius:6, border:isToday?`2px solid ${NAVY}`:"1px solid #e2e8f0",
+                      padding:"4px 6px", position:"relative"}}>
+                      {day && <div style={{fontSize:12, fontWeight:isToday?800:500, color:isToday?NAVY:"#64748b", marginBottom:3}}>{day}</div>}
+                      {dayProjs.map(p=>{
+                        const isDue = p.dueDate===ds;
+                        const isOverdue = isDue && ds && ds<today && p.status!=="Complete";
+                        const color = isOverdue?"#fee2e2":isDue?"#fef3c7":"#d1fae5";
+                        const textColor = isOverdue?"#991b1b":isDue?"#92400e":"#065f46";
+                        return (
+                          <div key={p.id} style={{background:color, color:textColor, borderRadius:4,
+                            padding:"2px 5px", fontSize:10, fontWeight:600, marginBottom:2,
+                            overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis"}}
+                            title={`${p.name} — ${isDue?"Due":"Starts"} ${ds}`}>
+                            {isDue?"●":"○"} {p.name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Legend */}
+              <div style={{display:"flex", gap:16, marginTop:14, fontSize:11, color:"#64748b", flexWrap:"wrap"}}>
+                <span><span style={{background:"#fef3c7", borderRadius:3, padding:"1px 6px", color:"#92400e"}}>●</span> Due date</span>
+                <span><span style={{background:"#d1fae5", borderRadius:3, padding:"1px 6px", color:"#065f46"}}>○</span> Start date</span>
+                <span><span style={{background:"#fee2e2", borderRadius:3, padding:"1px 6px", color:"#991b1b"}}>●</span> Overdue</span>
+              </div>
+            </div>
+          );
+        })()
+      ) : (
         <div style={{display:"flex", flexDirection:"column", gap:14}}>
           {projects.map(proj=>{
             const isExp = expanded===proj.id;
