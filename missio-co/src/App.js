@@ -492,13 +492,26 @@ function DashboardPage({ properties, tasks, requests, projects, managers, naviga
 // ── PROPERTIES PAGE ───────────────────────────────────────────────────────────
 function PropertiesPage({ properties, setProperties, characteristics, managers, opsStaff, employees, vendors, interns, volunteers, tasks, requests, projects, propView, setPropView }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", address:"", characteristics:[], assignedManagers:[], assignedOpsStaff:[]});
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", address:"", characteristics:[], assignedManagers:[], assignedOpsStaff:[]};
+  const [form, setForm] = useState(BLANK);
 
-  const add = () => {
+  const save = () => {
     if (!form.name.trim()) return;
-    setProperties([...properties, {...form, id:uid(), createdAt:new Date().toISOString()}]);
-    setForm({name:"", address:"", characteristics:[], assignedManagers:[], assignedOpsStaff:[]});
+    if (editing) {
+      setProperties(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setProperties(arr => [...arr, {...form, id:uid(), createdAt:new Date().toISOString()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
 
   if (propView) {
@@ -574,20 +587,20 @@ function PropertiesPage({ properties, setProperties, characteristics, managers, 
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub={`${properties.length} propert${properties.length===1?"y":"ies"} total`}>Properties</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Property</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Property</button>
       </div>
 
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add New Property</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Property" : "New Property"}</h3>
           <input style={inp} placeholder="Property Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Address" value={form.address} onChange={e=>setForm({...form,address:e.target.value})}/>
           <MultiSelect label="Characteristics" options={characteristics.map(c=>({id:c,name:c}))} selected={form.characteristics} onChange={v=>setForm({...form,characteristics:v})}/>
           <MultiSelect label="Assign Managers (L3)" options={managers.map(m=>({id:m.id,name:m.name}))} selected={form.assignedManagers} onChange={v=>setForm({...form,assignedManagers:v})}/>
           <MultiSelect label="Assign Ops Staff (L2)" options={opsStaff.map(m=>({id:m.id,name:m.name}))} selected={form.assignedOpsStaff} onChange={v=>setForm({...form,assignedOpsStaff:v})}/>
           <div style={{display:"flex", gap:10, marginTop:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -604,7 +617,7 @@ function PropertiesPage({ properties, setProperties, characteristics, managers, 
               <Card key={p.id} onClick={()=>setPropView(p.id)} style={{cursor:"pointer", borderLeft:`4px solid ${GOLD}`, transition:"box-shadow 0.15s"}} >
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
                   <div style={{fontWeight:800, fontSize:16, color:NAVY}}>{p.name}</div>
-                  <DeleteBtn onClick={()=>setProperties(properties.filter(x=>x.id!==p.id))}/>
+                  <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(p)}/><DeleteBtn onClick={()=>setProperties(properties.filter(x=>x.id!==p.id))}/></div>
                 </div>
                 {p.address&&<div style={{fontSize:12, color:"#64748b", marginTop:4}}>{p.address}</div>}
                 {p.characteristics&&p.characteristics.length>0&&(
@@ -851,22 +864,35 @@ function ManagersPage({ managers, setManagers, properties }) {
 // ── EMPLOYEES ─────────────────────────────────────────────────────────────────
 function EmployeesPage({ employees, setEmployees, properties, managers, customSkills, setCustomSkills }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", type:"Skilled Labor", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", type:"Skilled Labor", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setEmployees([...employees, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", type:"Skilled Labor", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}});
+    if (editing) {
+      setEmployees(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setEmployees(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 4 — Property employees">Employees</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Employee</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Employee</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Employee</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Employee" : "New Employee"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
@@ -885,8 +911,8 @@ function EmployeesPage({ employees, setEmployees, properties, managers, customSk
           <input style={inp} type="number" placeholder="Hours Logged" value={form.hoursLogged} onChange={e=>setForm({...form,hoursLogged:parseFloat(e.target.value)||0})}/>
           <SkillsChecklist skills={form.skills} onChange={s=>setForm({...form,skills:s})} customSkills={customSkills} onCustomSkillsChange={setCustomSkills}/>
           <div style={{display:"flex", gap:10, marginTop:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -900,7 +926,7 @@ function EmployeesPage({ employees, setEmployees, properties, managers, customSk
               <Card key={emp.id}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                   <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{emp.name}</div>
-                  <DeleteBtn onClick={()=>setEmployees(employees.filter(x=>x.id!==emp.id))}/>
+                  <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(emp)}/><DeleteBtn onClick={()=>setEmployees(employees.filter(x=>x.id!==emp.id))}/></div>
                 </div>
                 <div style={{marginBottom:6}}>{badge(emp.type, "#dbeafe", "#1e40af")}</div>
                 {emp.email&&<div style={{fontSize:12, color:"#64748b"}}>{emp.email}</div>}
@@ -921,22 +947,35 @@ function EmployeesPage({ employees, setEmployees, properties, managers, customSk
 // ── VENDORS ───────────────────────────────────────────────────────────────────
 function VendorsPage({ vendors, setVendors, properties, customSkills, setCustomSkills }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", company:"", service:"", email:"", phone:"", assignedProperties:[], status:"Active", scopeNotes:"", costNotes:"", skills:{}});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", company:"", service:"", email:"", phone:"", assignedProperties:[], status:"Active", scopeNotes:"", costNotes:"", skills:{}};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setVendors([...vendors, {...form, id:uid()}]);
-    setForm({name:"", company:"", service:"", email:"", phone:"", assignedProperties:[], status:"Active", scopeNotes:"", costNotes:"", skills:{}});
+    if (editing) {
+      setVendors(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setVendors(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 4 — External service vendors">Vendors</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Vendor</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Vendor</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Vendor</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Vendor" : "New Vendor"}</h3>
           <input style={inp} placeholder="Contact Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Company" value={form.company} onChange={e=>setForm({...form,company:e.target.value})}/>
           <input style={inp} placeholder="Service" value={form.service} onChange={e=>setForm({...form,service:e.target.value})}/>
@@ -952,8 +991,8 @@ function VendorsPage({ vendors, setVendors, properties, customSkills, setCustomS
           <textarea style={{...inp, resize:"vertical", minHeight:60}} placeholder="Cost Notes" value={form.costNotes} onChange={e=>setForm({...form,costNotes:e.target.value})}/>
           <SkillsChecklist skills={form.skills} onChange={s=>setForm({...form,skills:s})} customSkills={customSkills} onCustomSkillsChange={setCustomSkills}/>
           <div style={{display:"flex", gap:10, marginTop:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -966,7 +1005,7 @@ function VendorsPage({ vendors, setVendors, properties, customSkills, setCustomS
               <Card key={v.id}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                   <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{v.name}</div>
-                  <DeleteBtn onClick={()=>setVendors(vendors.filter(x=>x.id!==v.id))}/>
+                  <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(v)}/><DeleteBtn onClick={()=>setVendors(vendors.filter(x=>x.id!==v.id))}/></div>
                 </div>
                 {v.company&&<div style={{fontSize:12, color:"#475569", fontWeight:600}}>{v.company}</div>}
                 {v.service&&<div style={{fontSize:12, color:"#64748b"}}>{v.service}</div>}
@@ -987,22 +1026,35 @@ function VendorsPage({ vendors, setVendors, properties, customSkills, setCustomS
 // ── INTERNS ───────────────────────────────────────────────────────────────────
 function InternsPage({ interns, setInterns, properties, managers, customSkills, setCustomSkills }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", startDate:"", learningGoal:"", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", startDate:"", learningGoal:"", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setInterns([...interns, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", startDate:"", learningGoal:"", assignedProperties:[], assignedManager:"", hoursLogged:0, skills:{}});
+    if (editing) {
+      setInterns(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setInterns(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 4 — Interns and trainees">Interns</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Intern</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Intern</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Intern</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Intern" : "New Intern"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
@@ -1020,8 +1072,8 @@ function InternsPage({ interns, setInterns, properties, managers, customSkills, 
           <input style={inp} type="number" placeholder="Hours Logged" value={form.hoursLogged} onChange={e=>setForm({...form,hoursLogged:parseFloat(e.target.value)||0})}/>
           <SkillsChecklist skills={form.skills} onChange={s=>setForm({...form,skills:s})} customSkills={customSkills} onCustomSkillsChange={setCustomSkills}/>
           <div style={{display:"flex", gap:10, marginTop:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -1035,7 +1087,7 @@ function InternsPage({ interns, setInterns, properties, managers, customSkills, 
               <Card key={intern.id}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                   <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{intern.name}</div>
-                  <DeleteBtn onClick={()=>setInterns(interns.filter(x=>x.id!==intern.id))}/>
+                  <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(intern)}/><DeleteBtn onClick={()=>setInterns(interns.filter(x=>x.id!==intern.id))}/></div>
                 </div>
                 {intern.email&&<div style={{fontSize:12, color:"#64748b"}}>{intern.email}</div>}
                 {intern.phone&&<div style={{fontSize:12, color:"#64748b"}}>{intern.phone}</div>}
@@ -1057,22 +1109,35 @@ function InternsPage({ interns, setInterns, properties, managers, customSkills, 
 // ── VOLUNTEERS ────────────────────────────────────────────────────────────────
 function VolunteersPage({ volunteers, setVolunteers, properties, customSkills, setCustomSkills }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", email:"", phone:"", type:"One-Time", org:"", assignedProperties:[], hoursLogged:0, skills:{}});
-  const add = () => {
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", email:"", phone:"", type:"One-Time", org:"", assignedProperties:[], hoursLogged:0, skills:{}};
+  const [form, setForm] = useState(BLANK);
+  const save = () => {
     if (!form.name.trim()) return;
-    setVolunteers([...volunteers, {...form, id:uid()}]);
-    setForm({name:"", email:"", phone:"", type:"One-Time", org:"", assignedProperties:[], hoursLogged:0, skills:{}});
+    if (editing) {
+      setVolunteers(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setVolunteers(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Level 5 — Community volunteers">Volunteers</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Volunteer</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Volunteer</button>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Volunteer</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Volunteer" : "New Volunteer"}</h3>
           <input style={inp} placeholder="Full Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <input style={inp} placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
           <input style={inp} placeholder="Phone" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
@@ -1087,8 +1152,8 @@ function VolunteersPage({ volunteers, setVolunteers, properties, customSkills, s
           <input style={inp} type="number" placeholder="Hours Logged" value={form.hoursLogged} onChange={e=>setForm({...form,hoursLogged:parseFloat(e.target.value)||0})}/>
           <SkillsChecklist skills={form.skills} onChange={s=>setForm({...form,skills:s})} customSkills={customSkills} onCustomSkillsChange={setCustomSkills}/>
           <div style={{display:"flex", gap:10, marginTop:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -1101,7 +1166,7 @@ function VolunteersPage({ volunteers, setVolunteers, properties, customSkills, s
               <Card key={vol.id}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
                   <div style={{fontWeight:800, fontSize:15, color:NAVY}}>{vol.name}</div>
-                  <DeleteBtn onClick={()=>setVolunteers(volunteers.filter(x=>x.id!==vol.id))}/>
+                  <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(vol)}/><DeleteBtn onClick={()=>setVolunteers(volunteers.filter(x=>x.id!==vol.id))}/></div>
                 </div>
                 {badge(vol.type)}
                 {vol.org&&<div style={{fontSize:12, color:"#64748b", marginTop:4}}>{vol.org}</div>}
@@ -1122,14 +1187,27 @@ function VolunteersPage({ volunteers, setVolunteers, properties, customSkills, s
 // ── TASKS ─────────────────────────────────────────────────────────────────────
 function TasksPage({ tasks, setTasks, properties }) {
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState("All");
-  const [form, setForm] = useState({title:"", propertyId:"", assignedTo:"", frequency:"Weekly", priority:"Routine", status:"Pending"});
+  const BLANK = {title:"", propertyId:"", assignedTo:"", frequency:"Weekly", priority:"Routine", status:"Pending"};
+  const [form, setForm] = useState(BLANK);
   const FREQS = ["All","Daily","Weekly","Monthly","Quarterly","Annual"];
-  const add = () => {
+  const save = () => {
     if (!form.title.trim()) return;
-    setTasks([...tasks, {...form, id:uid()}]);
-    setForm({title:"", propertyId:"", assignedTo:"", frequency:"Weekly", priority:"Routine", status:"Pending"});
+    if (editing) {
+      setTasks(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setTasks(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   const toggle = (id) => setTasks(tasks.map(t=>t.id===id?{...t, status:t.status==="Complete"?"Pending":"Complete"}:t));
   const filtered = filter==="All" ? tasks : tasks.filter(t=>t.frequency===filter);
@@ -1137,7 +1215,7 @@ function TasksPage({ tasks, setTasks, properties }) {
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub={`${tasks.length} total tasks`}>Tasks</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Task</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Task</button>
       </div>
       <div style={{display:"flex", gap:8, marginBottom:20, flexWrap:"wrap"}}>
         {FREQS.map(f=>(
@@ -1146,7 +1224,7 @@ function TasksPage({ tasks, setTasks, properties }) {
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Add Task</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Task" : "New Task"}</h3>
           <input style={inp} placeholder="Task Title *" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/>
           <select style={inp} value={form.propertyId} onChange={e=>setForm({...form,propertyId:e.target.value})}>
             <option value="">No Property</option>
@@ -1163,8 +1241,8 @@ function TasksPage({ tasks, setTasks, properties }) {
             <option>Pending</option><option>In Progress</option><option>Complete</option>
           </select>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -1187,6 +1265,7 @@ function TasksPage({ tasks, setTasks, properties }) {
                   <div style={{display:"flex", gap:6, alignItems:"center"}}>
                     {priorityBadge(t.priority)}
                     {statusBadge(t.status)}
+                    <EditBtn onClick={()=>startEdit(t)}/>
                     <DeleteBtn onClick={()=>setTasks(tasks.filter(x=>x.id!==t.id))}/>
                   </div>
                 </div>
@@ -1202,21 +1281,34 @@ function TasksPage({ tasks, setTasks, properties }) {
 // ── REQUESTS ──────────────────────────────────────────────────────────────────
 function RequestsPage({ requests, setRequests, properties, projects }) {
   const [tab, setTab] = useState("triage");
-  const [form, setForm] = useState({title:"", submitter:"", submitterRole:"Staff", propertyId:"", urgency:"Routine", reason:"", eventLinked:false, eventDate:"", projectId:"", status:"Open"});
+  const [editing, setEditing] = useState(null);
+  const BLANK = {title:"", submitter:"", submitterRole:"Staff", propertyId:"", urgency:"Routine", reason:"", eventLinked:false, eventDate:"", projectId:"", status:"Open"};
+  const [form, setForm] = useState(BLANK);
   const URGENCY_ORDER = {Emergency:0, Urgent:1, Routine:2, Scheduled:3};
   const sorted = [...requests].sort((a,b)=>(URGENCY_ORDER[a.urgency]||3)-(URGENCY_ORDER[b.urgency]||3));
-  const add = () => {
+  const save = () => {
     if (!form.title.trim()||!form.reason.trim()) return;
-    setRequests([...requests, {...form, id:uid()}]);
-    setForm({title:"", submitter:"", submitterRole:"Staff", propertyId:"", urgency:"Routine", reason:"", eventLinked:false, eventDate:"", projectId:"", status:"Open"});
+    if (editing) {
+      setRequests(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setRequests(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setTab("triage");
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setTab("new");
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   return (
     <div>
       <SectionTitle sub="Manage and triage incoming property requests">Requests</SectionTitle>
       <div style={{display:"flex", gap:8, marginBottom:20}}>
         <button onClick={()=>setTab("triage")} style={{padding:"8px 20px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:700, background:tab==="triage"?NAVY:"#e2e8f0", color:tab==="triage"?"#fff":"#475569"}}>Triage Board</button>
-        <button onClick={()=>setTab("new")} style={{padding:"8px 20px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:700, background:tab==="new"?NAVY:"#e2e8f0", color:tab==="new"?"#fff":"#475569"}}>+ New Request</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setTab("new");}} style={{padding:"8px 20px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:700, background:tab==="new"?NAVY:"#e2e8f0", color:tab==="new"?"#fff":"#475569"}}>+ New Request</button>
       </div>
       {tab==="triage" && (
         sorted.length===0 ? <EmptyState icon="↗" title="No Requests" message="Submit a new request using the button above." action="New Request" onAction={()=>setTab("new")}/> : (
@@ -1236,7 +1328,7 @@ function RequestsPage({ requests, setRequests, properties, projects }) {
                         {r.eventLinked&&badge("Event Linked", "#ede9fe", "#5b21b6")}
                       </div>
                     </div>
-                    <DeleteBtn onClick={()=>setRequests(requests.filter(x=>x.id!==r.id))}/>
+                    <div style={{display:"flex", gap:6}}><EditBtn onClick={()=>startEdit(r)}/><DeleteBtn onClick={()=>setRequests(requests.filter(x=>x.id!==r.id))}/></div>
                   </div>
                 </Card>
               )
@@ -1246,7 +1338,7 @@ function RequestsPage({ requests, setRequests, properties, projects }) {
       )}
       {tab==="new" && (
         <Card style={{borderLeft:`4px solid ${GOLD}`, maxWidth:600}}>
-          <h3 style={{marginTop:0, color:NAVY}}>Submit New Request</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing ? "Edit Request" : "Submit New Request"}</h3>
           <input style={inp} placeholder="Request Title *" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/>
           <input style={inp} placeholder="Submitter Name" value={form.submitter} onChange={e=>setForm({...form,submitter:e.target.value})}/>
           <select style={inp} value={form.submitterRole} onChange={e=>setForm({...form,submitterRole:e.target.value})}>
@@ -1273,8 +1365,8 @@ function RequestsPage({ requests, setRequests, properties, projects }) {
             <option>Open</option><option>In Progress</option><option>Under Review</option><option>Complete</option><option>Cancelled</option>
           </select>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Submit</button>
-            <button onClick={()=>setTab("triage")} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing ? "Save Changes" : "Submit"}</button>
+            <button onClick={()=>{setEditing(null);setForm(BLANK);setTab("triage");}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -1285,7 +1377,9 @@ function RequestsPage({ requests, setRequests, properties, projects }) {
 // ── CHECKLISTS ────────────────────────────────────────────────────────────────
 function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({name:"", type:"Onboarding", frequency:"Weekly", assignedTo:[], items:[]});
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", type:"Onboarding", frequency:"Weekly", assignedTo:[], items:[]};
+  const [form, setForm] = useState(BLANK);
   const [newItem, setNewItem] = useState("");
   const [csvPreview, setCsvPreview] = useState(null);
   const [csvRows, setCsvRows] = useState([]);
@@ -1297,11 +1391,22 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
     setForm({...form, items:[...form.items, {id:uid(), text:newItem.trim(), complete:false}]});
     setNewItem("");
   };
-  const add = () => {
+  const save = () => {
     if (!form.name.trim()) return;
-    setChecklists([...checklists, {...form, id:uid()}]);
-    setForm({name:"", type:"Onboarding", frequency:"Weekly", assignedTo:[], items:[]});
+    if (editing) {
+      setChecklists(arr => arr.map(x => x.id === editing ? {...form, id: editing} : x));
+      setEditing(null);
+    } else {
+      setChecklists(arr => [...arr, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
+  };
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
   const toggleItem = (clId, itemId) => {
     setChecklists(checklists.map(cl=>cl.id===clId?{...cl, items:cl.items.map(it=>it.id===itemId?{...it, complete:!it.complete}:it)}:cl));
@@ -1346,7 +1451,7 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
     <div>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20}}>
         <SectionTitle sub="Onboarding and recurring task checklists">Checklists</SectionTitle>
-        <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ New Checklist</button>
+        <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ New Checklist</button>
       </div>
 
       {/* CSV Section */}
@@ -1440,7 +1545,7 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
             <button onClick={addItem} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"0 14px", fontWeight:700, cursor:"pointer"}}>+</button>
           </div>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
+            <button onClick={save} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
             <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
