@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const NAVY = "#1a2744";
 const GREEN = "#2d5a1b";
@@ -220,7 +220,16 @@ export default function App() {
   const [checklists, setChecklists] = useState([]);
   const [projects, setProjects] = useState([]);
 
-  const navigate = (p) => { setPage(p); setPropView(null); };
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handle = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+
+  const navigate = (p) => { setPage(p); setPropView(null); setSidebarOpen(false); };
 
   const allPeople = [
     ...owners.map(p=>({...p, role:"Owner"})),
@@ -266,41 +275,83 @@ export default function App() {
 
   const groups = ["OVERVIEW","PROPERTIES","PEOPLE","OPERATIONS"];
 
+  const sidebarContent = (
+    <>
+      <div style={{padding:"24px 20px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
+        <div style={{display:"flex", justifyContent:"center", marginBottom:12}}>
+          <Logo size={isMobile ? 52 : 64}/>
+        </div>
+        <div style={{textAlign:"center"}}>
+          <div style={{color:"#fff", fontWeight:900, fontSize:18, letterSpacing:2}}>PROPERTYHUB</div>
+          <div style={{color:GREEN, fontSize:11, fontWeight:600, marginTop:2}}>Powered by Missio Co.</div>
+          <div style={{color:GOLD, fontSize:10, marginTop:2, lineHeight:1.4}}>One App. Multiple Properties.<br/>Consistent Care.</div>
+          <div style={{margin:"8px auto 0", width:40, height:2, background:GREEN, borderRadius:2}}/>
+        </div>
+      </div>
+      <nav style={{padding:"12px 0", flex:1, overflowY:"auto"}}>
+        {groups.map(g => (
+          <div key={g}>
+            <div style={{padding:"12px 16px 4px", fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.35)", letterSpacing:1}}>{g}</div>
+            {NAV.filter(n=>n.group===g).map(n => (
+              <button key={n.id} style={navBtn(page===n.id)} onClick={()=>navigate(n.id)}>
+                <span>{n.icon}</span>
+                <span style={{flex:1}}>{n.label}</span>
+                {n.level && <span style={{fontSize:9, background:"rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", borderRadius:4, padding:"1px 5px"}}>{n.level}</span>}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div style={{padding:"12px 16px", borderTop:"1px solid rgba(255,255,255,0.1)", fontSize:10, color:"rgba(255,255,255,0.3)"}}>
+        PROPERTYHUB · Missio Co.
+      </div>
+    </>
+  );
+
   return (
-    <div style={{display:"flex", height:"100vh", fontFamily:"system-ui, -apple-system, sans-serif", background:"#f8f6f0"}}>
-      <aside style={{width:240, background:NAVY, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto"}}>
-        <div style={{padding:"24px 20px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
-          <div style={{display:"flex", justifyContent:"center", marginBottom:12}}>
-            <Logo size={64}/>
+    <div style={{display:"flex", height:"100vh", fontFamily:"system-ui, -apple-system, sans-serif", background:"#f8f6f0", position:"relative"}}>
+
+      {/* ── Mobile overlay ── */}
+      {isMobile && sidebarOpen && (
+        <div onClick={()=>setSidebarOpen(false)}
+          style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:40}}/>
+      )}
+
+      {/* ── Sidebar: fixed slide-in on mobile, static on desktop ── */}
+      {isMobile ? (
+        <aside style={{
+          position:"fixed", top:0, left:0, height:"100%", width:260,
+          background:NAVY, display:"flex", flexDirection:"column",
+          zIndex:50, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transition:"transform 0.25s ease", overflowY:"auto",
+        }}>
+          <button onClick={()=>setSidebarOpen(false)}
+            style={{position:"absolute", top:12, right:12, background:"transparent", border:"none",
+              color:"rgba(255,255,255,0.6)", fontSize:22, cursor:"pointer", lineHeight:1}}>✕</button>
+          {sidebarContent}
+        </aside>
+      ) : (
+        <aside style={{width:240, background:NAVY, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto"}}>
+          {sidebarContent}
+        </aside>
+      )}
+
+      {/* ── Main content ── */}
+      <div style={{flex:1, display:"flex", flexDirection:"column", minWidth:0, overflow:"hidden"}}>
+
+        {/* Mobile top bar */}
+        {isMobile && (
+          <div style={{background:NAVY, padding:"12px 16px", display:"flex", alignItems:"center", gap:12, flexShrink:0}}>
+            <button onClick={()=>setSidebarOpen(true)}
+              style={{background:"transparent", border:"none", color:"#fff", fontSize:22, cursor:"pointer", lineHeight:1, padding:0}}>☰</button>
+            <span style={{color:"#fff", fontWeight:800, fontSize:16, letterSpacing:1}}>PROPERTYHUB</span>
           </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{color:"#fff", fontWeight:900, fontSize:18, letterSpacing:2}}>PROPERTYHUB</div>
-            <div style={{color:GREEN, fontSize:11, fontWeight:600, marginTop:2}}>Powered by Missio Co.</div>
-            <div style={{color:GOLD, fontSize:10, marginTop:2, lineHeight:1.4}}>One App. Multiple Properties.<br/>Consistent Care.</div>
-            <div style={{margin:"8px auto 0", width:40, height:2, background:GREEN, borderRadius:2}}/>
-          </div>
-        </div>
-        <nav style={{padding:"12px 0", flex:1}}>
-          {groups.map(g => (
-            <div key={g}>
-              <div style={{padding:"12px 16px 4px", fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.35)", letterSpacing:1}}>{g}</div>
-              {NAV.filter(n=>n.group===g).map(n => (
-                <button key={n.id} style={navBtn(page===n.id)} onClick={()=>navigate(n.id)}>
-                  <span>{n.icon}</span>
-                  <span style={{flex:1}}>{n.label}</span>
-                  {n.level && <span style={{fontSize:9, background:"rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", borderRadius:4, padding:"1px 5px"}}>{n.level}</span>}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div style={{padding:"12px 16px", borderTop:"1px solid rgba(255,255,255,0.1)", fontSize:10, color:"rgba(255,255,255,0.3)"}}>
-          PROPERTYHUB · Missio Co.
-        </div>
-      </aside>
-      <main style={{flex:1, padding:"32px 36px", overflowY:"auto", background:"#f8f6f0"}}>
-        {content}
-      </main>
+        )}
+
+        <main style={{flex:1, padding: isMobile ? "20px 16px" : "32px 36px", overflowY:"auto", background:"#f8f6f0"}}>
+          {content}
+        </main>
+      </div>
     </div>
   );
 }
@@ -450,7 +501,7 @@ function PropertiesPage({ properties, setProperties, characteristics, managers, 
           </div>
         )}
 
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:24}}>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20, marginBottom:24}}>
           <Card>
             <h3 style={{fontWeight:700, color:NAVY, marginTop:0, marginBottom:10, fontSize:14}}>Assigned People</h3>
             {assignedOps.length>0&&<div style={{marginBottom:6}}><b style={{fontSize:12}}>Ops Staff:</b> {assignedOps.map(p=>p.name).join(", ")}</div>}
@@ -470,7 +521,7 @@ function PropertiesPage({ properties, setProperties, characteristics, managers, 
             ))}
           </Card>
         </div>
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:20}}>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20}}>
           <Card>
             <h3 style={{fontWeight:700, color:NAVY, marginTop:0, marginBottom:10, fontSize:14}}>Open Requests ({propRequests.filter(r=>r.status==="Open").length})</h3>
             {propRequests.length===0?<div style={{fontSize:12,color:"#94a3b8"}}>No requests.</div>:propRequests.slice(0,5).map(r=>(
@@ -1369,7 +1420,7 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
           <textarea style={{...inp, resize:"vertical", minHeight:60}} placeholder="Description" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/>
           <MultiSelect label="Properties" options={properties.map(p=>({id:p.id,name:p.name}))} selected={form.propertyIds} onChange={v=>setForm({...form,propertyIds:v})}/>
           <MultiSelect label="Assigned People" options={allPeople.map(p=>({id:p.id,name:`${p.name} (${p.role})`}))} selected={form.assignedPeople} onChange={v=>setForm({...form,assignedPeople:v})}/>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:10}}>
             <div>
               <div style={{fontSize:12, fontWeight:600, color:"#475569", marginBottom:4}}>Start Date</div>
               <input style={inp} type="date" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value})}/>
@@ -1415,7 +1466,7 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
                 {isExp && (
                   <div style={{marginTop:16, borderTop:"1px solid #f1f5f9", paddingTop:16}}>
                     {proj.description&&<p style={{fontSize:13, color:"#475569", margin:"0 0 12px"}}>{proj.description}</p>}
-                    <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16}}>
+                    <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:12, marginBottom:16}}>
                       <div>
                         <div style={{fontSize:12, fontWeight:600, color:"#475569"}}>Start Date</div>
                         <div style={{fontSize:13}}>{proj.startDate||"—"}</div>
