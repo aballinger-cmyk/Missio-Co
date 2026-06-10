@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/Missio-Co/static/css/main.e6c13ad2.css",
-    "main.js": "/Missio-Co/static/js/main.4db75b56.js",
+    "main.js": "/Missio-Co/static/js/main.ad95e361.js",
     "static/js/453.da759765.chunk.js": "/Missio-Co/static/js/453.da759765.chunk.js",
     "index.html": "/Missio-Co/index.html",
     "main.e6c13ad2.css.map": "/Missio-Co/static/css/main.e6c13ad2.css.map",
-    "main.4db75b56.js.map": "/Missio-Co/static/js/main.4db75b56.js.map",
+    "main.ad95e361.js.map": "/Missio-Co/static/js/main.ad95e361.js.map",
     "453.da759765.chunk.js.map": "/Missio-Co/static/js/453.da759765.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.4db75b56.js"
+    "static/js/main.ad95e361.js"
   ]
 }
