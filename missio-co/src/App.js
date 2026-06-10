@@ -199,26 +199,40 @@ const navBtn = (active) => ({
 });
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
+// ── localStorage helpers ───────────────────────────────────────────────────────
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function usePersist(key, initial) {
+  const [val, setVal] = useState(() => load(key, initial));
+  const set = (v) => {
+    setVal(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  return [val, set];
+}
+
 export default function App() {
   const [page, setPage] = useState("dashboard");
   const [propView, setPropView] = useState(null);
 
-  const [characteristics, setCharacteristics] = useState(DEFAULT_CHARACTERISTICS);
-  const [customSkills, setCustomSkills] = useState([]);
-
-  const [owners, setOwners] = useState([]);
-  const [opsStaff, setOpsStaff] = useState([]);
-  const [managers, setManagers] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [interns, setInterns] = useState([]);
-  const [volunteers, setVolunteers] = useState([]);
-
-  const [properties, setProperties] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [requests, setRequests] = useState([]);
-  const [checklists, setChecklists] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [characteristics, setCharacteristics]   = usePersist("ph_characteristics", DEFAULT_CHARACTERISTICS);
+  const [customSkills, setCustomSkills]           = usePersist("ph_customSkills", []);
+  const [owners, setOwners]                       = usePersist("ph_owners", []);
+  const [opsStaff, setOpsStaff]                   = usePersist("ph_opsStaff", []);
+  const [managers, setManagers]                   = usePersist("ph_managers", []);
+  const [employees, setEmployees]                 = usePersist("ph_employees", []);
+  const [vendors, setVendors]                     = usePersist("ph_vendors", []);
+  const [interns, setInterns]                     = usePersist("ph_interns", []);
+  const [volunteers, setVolunteers]               = usePersist("ph_volunteers", []);
+  const [properties, setProperties]               = usePersist("ph_properties", []);
+  const [tasks, setTasks]                         = usePersist("ph_tasks", []);
+  const [requests, setRequests]                   = usePersist("ph_requests", []);
+  const [checklists, setChecklists]               = usePersist("ph_checklists", []);
+  const [projects, setProjects]                   = usePersist("ph_projects", []);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
