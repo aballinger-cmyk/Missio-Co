@@ -1567,6 +1567,7 @@ function ChecklistsPage({ checklists, setChecklists, allPeople, tasks, setTasks 
                   </div>
                   <div style={{display:"flex", gap:8, alignItems:"center"}}>
                     <span style={{fontSize:12, color:"#64748b"}}>{done}/{cl.items.length} done</span>
+                    <EditBtn onClick={()=>startEdit(cl)}/>
                     <DeleteBtn onClick={()=>setChecklists(checklists.filter(x=>x.id!==cl.id))}/>
                   </div>
                 </div>
@@ -1594,13 +1595,26 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
   const [showForm, setShowForm] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [noteText, setNoteText] = useState("");
-  const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
+  const [viewMode, setViewMode] = useState("list");
   const [calDate, setCalDate] = useState(new Date());
-  const [form, setForm] = useState({name:"", description:"", propertyIds:[], assignedPeople:[], startDate:"", dueDate:"", status:"Not Started", notes:[]});
+  const [editing, setEditing] = useState(null);
+  const BLANK = {name:"", description:"", propertyIds:[], assignedPeople:[], startDate:"", dueDate:"", status:"Not Started", notes:[]};
+  const [form, setForm] = useState(BLANK);
+  const startEdit = (item) => {
+    setForm({...item});
+    setEditing(item.id);
+    setShowForm(true);
+    window.scrollTo({top:0, behavior:"smooth"});
+  };
   const add = () => {
     if (!form.name.trim()) return;
-    setProjects([...projects, {...form, id:uid()}]);
-    setForm({name:"", description:"", propertyIds:[], assignedPeople:[], startDate:"", dueDate:"", status:"Not Started", notes:[]});
+    if (editing) {
+      setProjects(projects.map(x => x.id === editing ? {...form, id:editing, notes:x.notes} : x));
+      setEditing(null);
+    } else {
+      setProjects([...projects, {...form, id:uid()}]);
+    }
+    setForm(BLANK);
     setShowForm(false);
   };
   const addNote = (projId) => {
@@ -1623,12 +1637,12 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
               </button>
             ))}
           </div>
-          <button onClick={()=>setShowForm(!showForm)} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Project</button>
+          <button onClick={()=>{setEditing(null);setForm(BLANK);setShowForm(!showForm);}} style={{background:NAVY, color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer"}}>+ Add Project</button>
         </div>
       </div>
       {showForm && (
         <Card style={{marginBottom:20, borderLeft:`4px solid ${GOLD}`}}>
-          <h3 style={{marginTop:0, color:NAVY}}>New Project</h3>
+          <h3 style={{marginTop:0, color:NAVY}}>{editing?"Edit Project":"New Project"}</h3>
           <input style={inp} placeholder="Project Name *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           <textarea style={{...inp, resize:"vertical", minHeight:60}} placeholder="Description" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/>
           <MultiSelect label="Properties" options={properties.map(p=>({id:p.id,name:p.name}))} selected={form.propertyIds} onChange={v=>setForm({...form,propertyIds:v})}/>
@@ -1647,8 +1661,8 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
             <option>Not Started</option><option>In Progress</option><option>Complete</option>
           </select>
           <div style={{display:"flex", gap:10}}>
-            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>Save</button>
-            <button onClick={()=>setShowForm(false)} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
+            <button onClick={add} style={{background:GREEN, color:"#fff", border:"none", borderRadius:8, padding:"9px 24px", fontWeight:700, cursor:"pointer"}}>{editing?"Save Changes":"Save"}</button>
+            <button onClick={()=>{setShowForm(false);setEditing(null);setForm(BLANK);}} style={{background:"#f1f5f9", color:"#475569", border:"none", borderRadius:8, padding:"9px 24px", cursor:"pointer"}}>Cancel</button>
           </div>
         </Card>
       )}
@@ -1745,7 +1759,8 @@ function ProjectsPage({ projects, setProjects, properties, allPeople }) {
                   </div>
                   <div style={{display:"flex", gap:8, alignItems:"center"}}>
                     <span style={{fontSize:20, color:"#94a3b8"}}>{isExp?"▲":"▼"}</span>
-                    <DeleteBtn onClick={()=>setProjects(projects.filter(x=>x.id!==proj.id))}/>
+                    <EditBtn onClick={e=>{e.stopPropagation();startEdit(proj);}}/>
+                    <DeleteBtn onClick={e=>{e.stopPropagation();setProjects(projects.filter(x=>x.id!==proj.id));}}/>
                   </div>
                 </div>
                 {isExp && (
