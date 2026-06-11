@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/determined-tesla-5wgy3x]
+    branches: [claude/amazing-dirac-pzz94j]
   workflow_dispatch:
 
 permissions:
